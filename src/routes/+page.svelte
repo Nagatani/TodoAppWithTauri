@@ -4,7 +4,8 @@
 
   let newTaskText: string = ''; // Typed newTaskText
   let newDueDate: string = '';
-  let sortByDueDateActive: boolean = false;
+  let sortColumn: keyof Todo | null = null; // Column to sort by
+  let sortDirection: 'asc' | 'desc' = 'asc'; // Sort direction
 
   onMount(async () => {
     await loadTodos();
@@ -28,25 +29,46 @@
     await deleteTodo(todoId);
   }
 
-  $: displayedTodos = sortByDueDateActive
-    ? [...$todos].sort((a, b) => {
-        const aHasDueDate = a.dueDate != null;
-        const bHasDueDate = b.dueDate != null;
+  function handleSort(column: keyof Todo) {
+    if (sortColumn === column) {
+      sortDirection = sortDirection === 'asc' ? 'desc' : 'asc';
+    } else {
+      sortColumn = column;
+      sortDirection = 'asc';
+    }
+  }
 
-        if (aHasDueDate && !bHasDueDate) {
-          return 1; // a (with due date) comes after b (without due date)
-        }
-        if (!aHasDueDate && bHasDueDate) {
-          return -1; // a (without due date) comes before b (with due date)
-        }
-        if (aHasDueDate && bHasDueDate) {
-          // Both have due dates, sort them chronologically
-          return new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime();
-        }
-        // Neither has a due date (or both are null), maintain original order (or sort by ID for stability)
-        return a.id - b.id; // Optional: sort by ID for stable sort among items without due dates
-      })
-    : $todos;
+  $: displayedTodos = [...$todos].sort((a, b) => {
+    if (!sortColumn) return (a.id < b.id) ? -1 : 1; // Default sort by ID if no column selected for stability
+
+    const valA = a[sortColumn];
+    const valB = b[sortColumn];
+
+    let comparison = 0;
+
+    switch (sortColumn) {
+      case 'task':
+        comparison = (valA as string).localeCompare(valB as string);
+        break;
+      case 'dueDate':
+        const dateA = valA ? new Date(valA as string).getTime() : null;
+        const dateB = valB ? new Date(valB as string).getTime() : null;
+        if (dateA === null && dateB === null) comparison = 0;
+        else if (dateA === null) comparison = 1; // nulls last for asc
+        else if (dateB === null) comparison = -1; // nulls last for asc
+        else comparison = dateA - dateB;
+        break;
+      case 'completed':
+        if ((valA as boolean) === (valB as boolean)) comparison = 0;
+        else comparison = (valA as boolean) ? 1 : -1; // True (completed) after False (pending)
+        break;
+      default:
+        // For 'id' or other non-specified sortable columns, sort by id
+        comparison = (a.id < b.id) ? -1 : 1; // Fallback to id sort
+        break;
+    }
+    return sortDirection === 'asc' ? comparison : -comparison;
+  });
 </script>
 
 <main>
@@ -66,29 +88,41 @@
     <button on:click={handleAddTodo}>Add Todo</button>
   </div>
 
-  <div class="controls" style="margin-bottom: 1em;">
-    <button on:click={() => sortByDueDateActive = !sortByDueDateActive}>
-      {sortByDueDateActive ? 'Clear Sort (Show All)' : 'Sort by Due Date'}
-    </button>
-  </div>
-
   {#if displayedTodos.length === 0}
     <p>No todos yet! Add one above.</p>
   {:else}
-    <ul>
-      {#each displayedTodos as todo (todo.id)}
-        <li class:completed={todo.completed}>
-          <!-- todo in '#each $todos as todo' will infer its type from $todos (Writable<Todo[]>) -->
-          <span on:click={() => handleToggleComplete(todo)}>
-            {todo.task}
-            {#if todo.dueDate}
-              <small style="margin-left: 10px; color: #666;">(Due: {new Date(todo.dueDate).toLocaleString()})</small>
-            {/if}
-          </span>
-          <button class="delete" on:click={() => handleDeleteTodo(todo.id)}>Delete</button>
-        </li>
-      {/each}
-    </ul>
+    <table>
+      <thead>
+        <tr>
+          <th on:click={() => handleSort('task')} style="cursor: pointer;">Task</th>
+          <th on:click={() => handleSort('dueDate')} style="cursor: pointer;">Due Date</th>
+          <th on:click={() => handleSort('completed')} style="cursor: pointer;">Status</th>
+          <th>Actions</th> <!-- Not sortable -->
+        </tr>
+      </thead>
+      <tbody>
+        {#each displayedTodos as todo (todo.id)}
+          <tr class:completed={todo.completed}>
+            <td on:click={() => handleToggleComplete(todo)} style="cursor: pointer;">
+              {todo.task}
+            </td>
+            <td>
+              {#if todo.dueDate}
+                {new Date(todo.dueDate).toLocaleString()}
+              {:else}
+                N/A
+              {/if}
+            </td>
+            <td>
+              {todo.completed ? 'Completed' : 'Pending'}
+            </td>
+            <td>
+              <button class="delete" on:click={() => handleDeleteTodo(todo.id)}>Delete</button>
+            </td>
+          </tr>
+        {/each}
+      </tbody>
+    </table>
   {/if}
 </main>
 
@@ -171,5 +205,40 @@
 
   li button.delete:hover {
     background-color: #c82333;
+  }
+
+  /* Table styles */
+  table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 1em;
+  }
+
+  th, td {
+    border: 1px solid #ddd;
+    padding: 8px 12px;
+    text-align: left;
+    vertical-align: middle;
+  }
+
+  th { /* Headers */
+    background-color: #f2f2f2;
+    font-weight: bold;
+  }
+
+  /* Clickable headers (assuming inline style="cursor:pointer" exists from previous step) */
+  th[style*="cursor: pointer"]:hover {
+      background-color: #e8e8e8;
+  }
+
+  /* Task cell (first child) in a completed row */
+  tr.completed td:first-child {
+    text-decoration: line-through;
+    color: #aaa;
+  }
+
+  /* Clickable task cell for toggling (assuming inline style="cursor:pointer" exists on it) */
+  td[style*="cursor: pointer"]:hover {
+    background-color: #f5f5f5;
   }
 </style>
