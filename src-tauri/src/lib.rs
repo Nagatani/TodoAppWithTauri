@@ -83,7 +83,6 @@ struct AddTodoArgs {
 
 #[tauri::command]
 fn add_todo(app_handle: tauri::AppHandle, args: AddTodoArgs) -> Result<(), String> {
-    println!("[Rust] add_todo called with task: '{}', due_date: {:?}", args.task, args.due_date);
     let conn = get_db_connection(&app_handle)?;
     conn.execute(
         "INSERT INTO todos (task, completed, due_date) VALUES (?1, 0, ?2)",

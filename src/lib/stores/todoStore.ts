@@ -30,9 +30,6 @@ export async function addTodo(taskText: string, dueDate: string | null): Promise
     return;
   }
   try {
-    // Log parameters as received by this store function
-    console.log(`[todoStore.addTodo] Preparing to invoke 'add_todo'. Task: "${taskText}", DueDate: ${dueDate}`);
-
     // Wrap payload in 'args' to match Rust struct argument
     await invoke('add_todo', { args: { task: taskText, due_date: dueDate } });
     await loadTodos();
