@@ -4,11 +4,12 @@ use tauri::Manager;
 
 // Define Todo struct
 #[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")] // Added this line
 struct Todo {
     id: i64,
     task: String,
     completed: bool,
-    due_date: Option<String>, // Added
+    due_date: Option<String>, // This field will be serialized as 'dueDate'
 }
 
 // Helper function to get database connection
