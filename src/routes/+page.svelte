@@ -1,24 +1,26 @@
-<script>
+<script lang="ts">
   import { onMount } from 'svelte';
-  import { todos, loadTodos, addTodo, updateTodoStatus, deleteTodo } from '../lib/stores/todoStore.js';
+  import { todos, loadTodos, addTodo, updateTodoStatus, deleteTodo, type Todo } from '../lib/stores/todoStore'; // Added 'type Todo'
 
-  let newTaskText = '';
+  let newTaskText: string = ''; // Typed newTaskText
 
   onMount(async () => {
     await loadTodos();
   });
 
-  async function handleAddTodo() {
+  async function handleAddTodo(): Promise<void> { // Typed return
     if (newTaskText.trim() === '') return;
     await addTodo(newTaskText);
     newTaskText = ''; // Clear input after adding
   }
 
-  async function handleToggleComplete(todo) {
+  // Explicitly type the 'todo' parameter here for clarity
+  async function handleToggleComplete(todo: Todo): Promise<void> { // Typed parameter and return
     await updateTodoStatus(todo.id, !todo.completed);
   }
 
-  async function handleDeleteTodo(todoId) {
+  // Explicitly type 'todoId'
+  async function handleDeleteTodo(todoId: number): Promise<void> { // Typed parameter and return
     await deleteTodo(todoId);
   }
 </script>
@@ -31,7 +33,7 @@
       type="text"
       bind:value={newTaskText}
       placeholder="What needs to be done?"
-      on:keypress={(e) => e.key === 'Enter' && handleAddTodo()}
+      on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && handleAddTodo()}
     />
     <button on:click={handleAddTodo}>Add Todo</button>
   </div>
@@ -42,6 +44,7 @@
     <ul>
       {#each $todos as todo (todo.id)}
         <li class:completed={todo.completed}>
+          <!-- todo in '#each $todos as todo' will infer its type from $todos (Writable<Todo[]>) -->
           <span on:click={() => handleToggleComplete(todo)}>
             {todo.task}
           </span>
