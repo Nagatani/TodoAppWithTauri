@@ -74,13 +74,20 @@ fn initialize_database(app_handle: &impl Manager<tauri::Wry>) -> Result<Connecti
     Ok(conn)
 }
 
+// Add this struct definition
+#[derive(serde::Deserialize)]
+struct AddTodoArgs {
+    task: String,
+    due_date: Option<String>,
+}
+
 #[tauri::command]
-fn add_todo(app_handle: tauri::AppHandle, task: String, due_date: Option<String>) -> Result<(), String> {
-    println!("[Rust] add_todo called with task: '{}', due_date: {:?}", task, due_date); // Added this line
+fn add_todo(app_handle: tauri::AppHandle, args: AddTodoArgs) -> Result<(), String> {
+    println!("[Rust] add_todo called with task: '{}', due_date: {:?}", args.task, args.due_date);
     let conn = get_db_connection(&app_handle)?;
     conn.execute(
         "INSERT INTO todos (task, completed, due_date) VALUES (?1, 0, ?2)",
-        params![task, due_date],
+        params![args.task, args.due_date], // Use fields from args struct
     )
     .map_err(|e| format!("Failed to add todo: {}", e))?;
     Ok(())
