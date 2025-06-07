@@ -1,156 +1,138 @@
 <script lang="ts">
-  import { invoke } from "@tauri-apps/api/core";
+  import { onMount } from 'svelte';
+  import { todos, loadTodos, addTodo, updateTodoStatus, deleteTodo, type Todo } from '../lib/stores/todoStore'; // Added 'type Todo'
 
-  let name = $state("");
-  let greetMsg = $state("");
+  let newTaskText: string = ''; // Typed newTaskText
 
-  async function greet(event: Event) {
-    event.preventDefault();
-    // Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-    greetMsg = await invoke("greet", { name });
+  onMount(async () => {
+    await loadTodos();
+  });
+
+  async function handleAddTodo(): Promise<void> { // Typed return
+    if (newTaskText.trim() === '') return;
+    await addTodo(newTaskText);
+    newTaskText = ''; // Clear input after adding
+  }
+
+  // Explicitly type the 'todo' parameter here for clarity
+  async function handleToggleComplete(todo: Todo): Promise<void> { // Typed parameter and return
+    await updateTodoStatus(todo.id, !todo.completed);
+  }
+
+  // Explicitly type 'todoId'
+  async function handleDeleteTodo(todoId: number): Promise<void> { // Typed parameter and return
+    await deleteTodo(todoId);
   }
 </script>
 
-<main class="container">
-  <h1>Welcome to Tauri + Svelte</h1>
+<main>
+  <h1>Todo App</h1>
 
-  <div class="row">
-    <a href="https://vitejs.dev" target="_blank">
-      <img src="/vite.svg" class="logo vite" alt="Vite Logo" />
-    </a>
-    <a href="https://tauri.app" target="_blank">
-      <img src="/tauri.svg" class="logo tauri" alt="Tauri Logo" />
-    </a>
-    <a href="https://kit.svelte.dev" target="_blank">
-      <img src="/svelte.svg" class="logo svelte-kit" alt="SvelteKit Logo" />
-    </a>
+  <div class="add-todo">
+    <input
+      type="text"
+      bind:value={newTaskText}
+      placeholder="What needs to be done?"
+      on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && handleAddTodo()}
+    />
+    <button on:click={handleAddTodo}>Add Todo</button>
   </div>
-  <p>Click on the Tauri, Vite, and SvelteKit logos to learn more.</p>
 
-  <form class="row" onsubmit={greet}>
-    <input id="greet-input" placeholder="Enter a name..." bind:value={name} />
-    <button type="submit">Greet</button>
-  </form>
-  <p>{greetMsg}</p>
+  {#if $todos.length === 0}
+    <p>No todos yet! Add one above.</p>
+  {:else}
+    <ul>
+      {#each $todos as todo (todo.id)}
+        <li class:completed={todo.completed}>
+          <!-- todo in '#each $todos as todo' will infer its type from $todos (Writable<Todo[]>) -->
+          <span on:click={() => handleToggleComplete(todo)}>
+            {todo.task}
+          </span>
+          <button class="delete" on:click={() => handleDeleteTodo(todo.id)}>Delete</button>
+        </li>
+      {/each}
+    </ul>
+  {/if}
 </main>
 
 <style>
-.logo.vite:hover {
-  filter: drop-shadow(0 0 2em #747bff);
-}
-
-.logo.svelte-kit:hover {
-  filter: drop-shadow(0 0 2em #ff3e00);
-}
-
-:root {
-  font-family: Inter, Avenir, Helvetica, Arial, sans-serif;
-  font-size: 16px;
-  line-height: 24px;
-  font-weight: 400;
-
-  color: #0f0f0f;
-  background-color: #f6f6f6;
-
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  -webkit-text-size-adjust: 100%;
-}
-
-.container {
-  margin: 0;
-  padding-top: 10vh;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  text-align: center;
-}
-
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: 0.75s;
-}
-
-.logo.tauri:hover {
-  filter: drop-shadow(0 0 2em #24c8db);
-}
-
-.row {
-  display: flex;
-  justify-content: center;
-}
-
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-
-a:hover {
-  color: #535bf2;
-}
-
-h1 {
-  text-align: center;
-}
-
-input,
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  color: #0f0f0f;
-  background-color: #ffffff;
-  transition: border-color 0.25s;
-  box-shadow: 0 2px 2px rgba(0, 0, 0, 0.2);
-}
-
-button {
-  cursor: pointer;
-}
-
-button:hover {
-  border-color: #396cd8;
-}
-button:active {
-  border-color: #396cd8;
-  background-color: #e8e8e8;
-}
-
-input,
-button {
-  outline: none;
-}
-
-#greet-input {
-  margin-right: 5px;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    color: #f6f6f6;
-    background-color: #2f2f2f;
+  main {
+    font-family: sans-serif;
+    max-width: 600px;
+    margin: 2em auto;
+    padding: 1em;
+    border: 1px solid #eee;
+    border-radius: 5px;
   }
 
-  a:hover {
-    color: #24c8db;
+  h1 {
+    color: #333;
+    text-align: center;
   }
 
-  input,
-  button {
-    color: #ffffff;
-    background-color: #0f0f0f98;
+  .add-todo {
+    display: flex;
+    margin-bottom: 1em;
   }
-  button:active {
-    background-color: #0f0f0f69;
-  }
-}
 
+  .add-todo input[type="text"] {
+    flex-grow: 1;
+    padding: 0.5em;
+    border: 1px solid #ccc;
+    border-radius: 3px;
+  }
+
+  .add-todo button {
+    padding: 0.5em 1em;
+    margin-left: 0.5em;
+    background-color: #007bff;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    cursor: pointer;
+  }
+
+  .add-todo button:hover {
+    background-color: #0056b3;
+  }
+
+  ul {
+    list-style: none;
+    padding: 0;
+  }
+
+  li {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5em 0;
+    border-bottom: 1px solid #eee;
+  }
+
+  li:last-child {
+    border-bottom: none;
+  }
+
+  li span {
+    cursor: pointer;
+    flex-grow: 1;
+  }
+
+  li.completed span {
+    text-decoration: line-through;
+    color: #aaa;
+  }
+
+  li button.delete {
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 3px;
+    padding: 0.3em 0.6em;
+    cursor: pointer;
+  }
+
+  li button.delete:hover {
+    background-color: #c82333;
+  }
 </style>

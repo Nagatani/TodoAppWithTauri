@@ -29,4 +29,13 @@ export default defineConfig(async () => ({
       ignored: ["**/src-tauri/**"],
     },
   },
+  build: {
+    rollupOptions: {
+      external: ['@tauri-apps/api/tauri'], // More specific
+    },
+  },
+  // Add this to prevent vite from trying to bundle tauri-apps/api
+  ssr: {
+    external: ['@tauri-apps/api/tauri'], // More specific
+  },
 }));
