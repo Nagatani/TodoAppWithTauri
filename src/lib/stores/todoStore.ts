@@ -30,8 +30,8 @@ export async function addTodo(taskText: string, dueDate: string | null): Promise
     return; // Or throw an error
   }
   try {
-    // The backend expects dueDate as part of the object.
-    await invoke('add_todo', { task: taskText, dueDate: dueDate });
+    // Align key with Rust backend parameter name 'due_date'
+    await invoke('add_todo', { task: taskText, due_date: dueDate });
     await loadTodos(); // Reload todos to reflect the addition
   } catch (error) {
     console.error("Failed to add todo:", error);
