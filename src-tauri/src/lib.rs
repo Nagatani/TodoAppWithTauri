@@ -40,7 +40,6 @@ fn initialize_database(app_handle: &impl Manager<tauri::Wry>) -> Result<Connecti
     let db_path = app_data_path.join("todo.db");
     let conn = Connection::open(db_path)?;
 
-    // Ensure the table exists, including the due_date column for new databases.
     conn.execute(
         "CREATE TABLE IF NOT EXISTS todos (
             id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -51,23 +50,23 @@ fn initialize_database(app_handle: &impl Manager<tauri::Wry>) -> Result<Connecti
         [],
     )?;
 
-    // Check if 'due_date' column actually exists (for older databases that might not have it)
-    let mut stmt = conn.prepare("PRAGMA table_info(todos);")?;
-    let mut column_exists = false;
-    // Iterate over column names from PRAGMA table_info(todos)
-    let column_names = stmt.query_map([], |row| row.get::<_, String>("name"))?;
-
-    for name_result in column_names {
-        if let Ok(name) = name_result {
-            if name == "due_date" {
-                column_exists = true;
-                break;
+    // Determine column_exists within a scope, then use it.
+    let mut column_exists_flag = false;
+    {
+        let mut stmt = conn.prepare("PRAGMA table_info(todos);")?;
+        let column_names_iter = stmt.query_map([], |row| row.get::<_, String>("name"))?;
+        for name_result in column_names_iter {
+            if let Ok(name) = name_result {
+                if name == "due_date" {
+                    column_exists_flag = true;
+                    break;
+                }
             }
         }
+        // stmt and column_names_iter go out of scope here
     }
 
-    // If 'due_date' column doesn't exist after CREATE TABLE (e.g. table pre-existed without it), add it.
-    if !column_exists {
+    if !column_exists_flag {
         conn.execute("ALTER TABLE todos ADD COLUMN due_date TEXT NULL", [])?;
         println!("'due_date' column successfully added to existing 'todos' table.");
     }
