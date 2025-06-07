@@ -76,6 +76,7 @@ fn initialize_database(app_handle: &impl Manager<tauri::Wry>) -> Result<Connecti
 
 #[tauri::command]
 fn add_todo(app_handle: tauri::AppHandle, task: String, due_date: Option<String>) -> Result<(), String> {
+    println!("[Rust] add_todo called with task: '{}', due_date: {:?}", task, due_date); // Added this line
     let conn = get_db_connection(&app_handle)?;
     conn.execute(
         "INSERT INTO todos (task, completed, due_date) VALUES (?1, 0, ?2)",
