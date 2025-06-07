@@ -13,8 +13,14 @@
 
   async function handleAddTodo(): Promise<void> {
     if (newTaskText.trim() === '') return;
-    // Pass null if newDueDate is empty, otherwise pass the string value
-    await addTodo(newTaskText, newDueDate || null);
+
+    // Log the values just before using them
+    console.log('[handleAddTodo] Attempting to add todo. Task:', newTaskText, 'Raw newDueDate:', newDueDate);
+
+    const dueDateToSend = newDueDate || null;
+    console.log('[handleAddTodo] Due date to send to store:', dueDateToSend);
+
+    await addTodo(newTaskText, dueDateToSend);
     newTaskText = '';
     newDueDate = ''; // Reset due date input
   }
