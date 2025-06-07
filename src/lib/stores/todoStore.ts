@@ -27,12 +27,15 @@ export async function loadTodos(): Promise<void> {
 export async function addTodo(taskText: string, dueDate: string | null): Promise<void> {
   if (!taskText || taskText.trim() === "") {
     console.error("Task cannot be empty");
-    return; // Or throw an error
+    return;
   }
   try {
-    // Align key with Rust backend parameter name 'due_date'
-    await invoke('add_todo', { task: taskText, due_date: dueDate });
-    await loadTodos(); // Reload todos to reflect the addition
+    // Log parameters as received by this store function
+    console.log(`[todoStore.addTodo] Preparing to invoke 'add_todo'. Task: "${taskText}", DueDate: ${dueDate}`);
+
+    // Wrap payload in 'args' to match Rust struct argument
+    await invoke('add_todo', { args: { task: taskText, due_date: dueDate } });
+    await loadTodos();
   } catch (error) {
     console.error("Failed to add todo:", error);
   }
