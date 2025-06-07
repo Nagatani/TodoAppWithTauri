@@ -6,6 +6,7 @@ export interface Todo {
   id: number; // Assuming id from backend is i64, which maps to number in JS/TS
   task: string;
   completed: boolean;
+  dueDate: string | null;
 }
 
 // Create a writable store for todos with the Todo interface
@@ -23,13 +24,14 @@ export async function loadTodos(): Promise<void> {
 }
 
 // Implement addTodo function with types
-export async function addTodo(taskText: string): Promise<void> {
+export async function addTodo(taskText: string, dueDate: string | null): Promise<void> {
   if (!taskText || taskText.trim() === "") {
     console.error("Task cannot be empty");
     return; // Or throw an error
   }
   try {
-    await invoke('add_todo', { task: taskText });
+    // The backend expects dueDate as part of the object.
+    await invoke('add_todo', { task: taskText, dueDate: dueDate });
     await loadTodos(); // Reload todos to reflect the addition
   } catch (error) {
     console.error("Failed to add todo:", error);

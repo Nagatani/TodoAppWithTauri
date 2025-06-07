@@ -3,15 +3,19 @@
   import { todos, loadTodos, addTodo, updateTodoStatus, deleteTodo, type Todo } from '../lib/stores/todoStore'; // Added 'type Todo'
 
   let newTaskText: string = ''; // Typed newTaskText
+  let newDueDate: string = '';
+  let sortByDueDateActive: boolean = false;
 
   onMount(async () => {
     await loadTodos();
   });
 
-  async function handleAddTodo(): Promise<void> { // Typed return
+  async function handleAddTodo(): Promise<void> {
     if (newTaskText.trim() === '') return;
-    await addTodo(newTaskText);
-    newTaskText = ''; // Clear input after adding
+    // Pass null if newDueDate is empty, otherwise pass the string value
+    await addTodo(newTaskText, newDueDate || null);
+    newTaskText = '';
+    newDueDate = ''; // Reset due date input
   }
 
   // Explicitly type the 'todo' parameter here for clarity
@@ -23,6 +27,26 @@
   async function handleDeleteTodo(todoId: number): Promise<void> { // Typed parameter and return
     await deleteTodo(todoId);
   }
+
+  $: displayedTodos = sortByDueDateActive
+    ? [...$todos].sort((a, b) => {
+        const aHasDueDate = a.dueDate != null;
+        const bHasDueDate = b.dueDate != null;
+
+        if (aHasDueDate && !bHasDueDate) {
+          return 1; // a (with due date) comes after b (without due date)
+        }
+        if (!aHasDueDate && bHasDueDate) {
+          return -1; // a (without due date) comes before b (with due date)
+        }
+        if (aHasDueDate && bHasDueDate) {
+          // Both have due dates, sort them chronologically
+          return new Date(a.dueDate!).getTime() - new Date(b.dueDate!).getTime();
+        }
+        // Neither has a due date (or both are null), maintain original order (or sort by ID for stability)
+        return a.id - b.id; // Optional: sort by ID for stable sort among items without due dates
+      })
+    : $todos;
 </script>
 
 <main>
@@ -34,19 +58,32 @@
       bind:value={newTaskText}
       placeholder="What needs to be done?"
       on:keypress={(e: KeyboardEvent) => e.key === 'Enter' && handleAddTodo()}
+      />
+      <input
+        type="datetime-local"
+        bind:value={newDueDate}
     />
     <button on:click={handleAddTodo}>Add Todo</button>
   </div>
 
-  {#if $todos.length === 0}
+  <div class="controls" style="margin-bottom: 1em;">
+    <button on:click={() => sortByDueDateActive = !sortByDueDateActive}>
+      {sortByDueDateActive ? 'Clear Sort (Show All)' : 'Sort by Due Date'}
+    </button>
+  </div>
+
+  {#if displayedTodos.length === 0}
     <p>No todos yet! Add one above.</p>
   {:else}
     <ul>
-      {#each $todos as todo (todo.id)}
+      {#each displayedTodos as todo (todo.id)}
         <li class:completed={todo.completed}>
           <!-- todo in '#each $todos as todo' will infer its type from $todos (Writable<Todo[]>) -->
           <span on:click={() => handleToggleComplete(todo)}>
             {todo.task}
+            {#if todo.dueDate}
+              <small style="margin-left: 10px; color: #666;">(Due: {new Date(todo.dueDate).toLocaleString()})</small>
+            {/if}
           </span>
           <button class="delete" on:click={() => handleDeleteTodo(todo.id)}>Delete</button>
         </li>
