@@ -1,5 +1,5 @@
 import { writable, type Writable } from 'svelte/store';
-import { invoke } from '@tauri-apps/api/tauri';
+import { invoke } from '@tauri-apps/api/core';
 
 // Define the Todo interface
 export interface Todo {

@@ -14,7 +14,7 @@ struct Todo {
 fn get_db_connection(app_handle: &impl tauri::Manager<tauri::Wry>) -> Result<Connection, String> {
     let app_data_path = app_handle.path().app_data_dir()
         .map_err(|e| format!("Failed to get app data directory: {}", e))?
-        .join("com.todo.app"); // Ensure this matches the init path
+        .join("db");
 
     let db_path = app_data_path.join("todo.db");
     Connection::open(db_path).map_err(|e| format!("Failed to open database: {}", e))
@@ -29,7 +29,7 @@ fn greet(name: &str) -> String {
 fn initialize_database(app_handle: &impl Manager<tauri::Wry>) -> Result<Connection, rusqlite::Error> {
     let app_data_path = app_handle.path().app_data_dir()
         .expect("Failed to get app data directory")
-        .join("com.todo.app"); // Replace com.todo.app with your app identifier if different
+        .join("db");
 
     if !app_data_path.exists() {
         fs::create_dir_all(&app_data_path).expect("Failed to create app data directory");
