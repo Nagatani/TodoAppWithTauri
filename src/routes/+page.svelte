@@ -6,9 +6,36 @@
   let newDueDate: string = '';
   let sortColumn: keyof Todo | null = null; // Column to sort by
   let sortDirection: 'asc' | 'desc' = 'asc'; // Sort direction
+  let notificationAudioElement: HTMLAudioElement;
+  let notifiedTaskIds: Set<number> = new Set();
 
   onMount(async () => {
     await loadTodos();
+    notificationAudioElement = document.getElementById('notificationSound') as HTMLAudioElement;
+
+    const intervalId = setInterval(() => {
+      const now = new Date();
+      $todos.forEach(todo => {
+        if (!todo.completed && todo.dueDate) {
+          const dueDate = new Date(todo.dueDate);
+          if (dueDate <= now) {
+            if (!notifiedTaskIds.has(todo.id)) {
+              console.log(`Todo "${todo.task}" is overdue! Playing sound.`);
+              if (notificationAudioElement) {
+                notificationAudioElement.play().catch(e => console.error("Error playing sound:", e));
+              }
+              notifiedTaskIds.add(todo.id);
+              notifiedTaskIds = notifiedTaskIds; // For Svelte reactivity with Sets, though direct mutation works for internal logic
+            }
+          }
+        }
+      });
+    }, 5000); // Check every 5 seconds
+
+    // Clear interval on component destroy
+    return () => {
+      clearInterval(intervalId);
+    };
   });
 
   async function handleAddTodo(): Promise<void> {
@@ -21,12 +48,19 @@
 
   // Explicitly type the 'todo' parameter here for clarity
   async function handleToggleComplete(todo: Todo): Promise<void> { // Typed parameter and return
-    await updateTodoStatus(todo.id, !todo.completed);
+    const newStatus = !todo.completed;
+    await updateTodoStatus(todo.id, newStatus);
+    if (!newStatus) { // If task is marked as not completed (i.e., was completed before)
+      notifiedTaskIds.delete(todo.id);
+      notifiedTaskIds = notifiedTaskIds;
+    }
   }
 
   // Explicitly type 'todoId'
   async function handleDeleteTodo(todoId: number): Promise<void> { // Typed parameter and return
     await deleteTodo(todoId);
+    notifiedTaskIds.delete(todoId);
+    notifiedTaskIds = notifiedTaskIds;
   }
 
   function handleSort(column: keyof Todo) {
@@ -72,6 +106,7 @@
 </script>
 
 <main>
+  <audio id="notificationSound" src="/notification.mp3" preload="auto"></audio>
   <h1>Todo App</h1>
 
   <div class="add-todo">
